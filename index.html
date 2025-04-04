@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java MCP Server Configuration Generator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --primary-color: #4695EB;
+            --secondary-color: #2D3436;
+            --background-color: #F8F9FA;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: var(--background-color);
+            color: var(--secondary-color);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--secondary-color);
+            font-size: 1.1em;
+        }
+        
+        .config-form {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .select-group {
+            margin-bottom: 20px;
+        }
+
+        .select-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        .select-group .description {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        select {
+            padding: 12px;
+            margin: 5px 0;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            background-color: white;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        select:hover {
+            border-color: var(--primary-color);
+        }
+        
+        .output-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .output-title {
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        .copy-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+
+        .copy-button:hover {
+            background-color: #3784d6;
+        }
+
+        .installation {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .installation h3 {
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        pre {
+            margin: 0;
+            border-radius: 6px;
+        }
+
+        code {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Java MCP Server Configuration Generator</h1>
+        <p>Generate configuration for your preferred MCP server and client in seconds</p>
+    </div>
+    
+    <div class="config-form">
+        <div class="select-group">
+            <label for="mcpClient">1. Select MCP Client</label>
+            <div class="description">Choose your preferred MCP client</div>
+            <select id="mcpClient">
+                <option value="">Choose a client...</option>
+                <option value="claude">Claude Desktop - AI-powered desktop assistant</option>
+                <option value="cursor">Cursor - AI-first code editor</option>
+                <option value="vscode">Visual Studio Code (Insiders) - Popular code editor</option>
+                <option value="quarkus">Quarkus LangChain4j - Java AI development framework</option>
+            </select>
+        </div>
+
+        <div class="select-group">
+            <label for="mcpServer">2. Select MCP Server</label>
+            <div class="description">Choose which MCP server functionality you need</div>
+            <select id="mcpServer">
+                <option value="">Choose a server...</option>
+            </select>
+        </div>
+
+        <div class="select-group">
+            <label for="launchMethod">3. Select Launch Method</label>
+            <div class="description">Choose how you want to run the MCP server</div>
+            <select id="launchMethod">
+                <option value="jbang">JBang - Run Java applications with zero installation</option>
+                <option value="uvx">UVX - UV tool for Python</option>
+                <option value="npm">NPM - Node Package Manager</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="output" class="output-container" style="display: none;">
+        <div class="output-header">
+            <span class="output-title" id="outputTitle"></span>
+            <button class="copy-button" onclick="copyConfig()">Copy Configuration</button>
+        </div>
+        <pre><code class="language-json" id="configOutput"></code></pre>
+        
+        <div id="installationInstructions" class="installation" style="display: none;">
+            <h3>Installation Instructions</h3>
+            <div id="installationSteps"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script>
+        // Configuration constants
+        const MCP_ORG = 'mcp-java';
+        
+        // Add catalog data fetching
+        async function fetchServerCatalog() {
+            try {
+                const response = await fetch(`https://raw.githubusercontent.com/${MCP_ORG}/jbang-catalog/main/jbang-catalog.json`);
+                const data = await response.json();
+                const serverSelect = document.getElementById('mcpServer');
+                
+                // Clear existing options except the first one
+                while (serverSelect.options.length > 1) {
+                    serverSelect.remove(1);
+                }
+                
+                // Add options from the catalog
+                Object.entries(data.aliases).forEach(([key, value]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = `${key} - ${value.description}`;
+                    serverSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching server catalog:', error);
+            }
+        }
+
+        // Call fetchServerCatalog when the page loads
+        document.addEventListener('DOMContentLoaded', fetchServerCatalog);
+
+        const configs = {
+            claude: {
+                filename: 'claude_desktop_config.json',
+                template: (server, command, args) => {
+                    const config = {
+                        mcpServers: {
+                            [server]: {
+                                command: command,
+                                args: args
+                            }
+                        }
+                    };
+                    return JSON.stringify(config, null, 2);
+                }
+            },
+            cursor: {
+                filename: 'mcp.json',
+                template: (server, command, args) => {
+                    const config = {
+                        mcpServers: {
+                            [server]: {
+                                command: command,
+                                args: args
+                            }
+                        }
+                    };
+                    return JSON.stringify(config, null, 2);
+                }
+            },
+            vscode: {
+                filename: 'settings.json',
+                template: (server, command, args) => {
+                    const config = {
+                        mcp: {
+                            servers: {
+                                [server]: {
+                                    type: "stdio",
+                                    command: command,
+                                    args: args
+                                }
+                            }
+                        }
+                    };
+                    return JSON.stringify(config, null, 2);
+                }
+            },
+            quarkus: {
+                filename: 'application.properties',
+                template: (server, command, args) => {
+                    return `quarkus.langchain4j.mcp.${server}.command=${[command, ...args].join(',')}`;
+                }
+            }
+        };
+
+        const installationGuides = {
+            jbang: `curl -Ls https://sh.jbang.dev | bash -s - app setup`,
+            uvx: `curl -LsSf https://astral.sh/uv/install.sh | sh`,
+            npm: `Already installed if you have Node.js, otherwise visit: https://nodejs.org`
+        };
+
+        function updateConfig() {
+            const server = document.getElementById('mcpServer').value;
+            const launchMethod = document.getElementById('launchMethod').value;
+            const client = document.getElementById('mcpClient').value;
+
+            const output = document.getElementById('output');
+            const configOutput = document.getElementById('configOutput');
+            const outputTitle = document.getElementById('outputTitle');
+            const installationInstructions = document.getElementById('installationInstructions');
+            const installationSteps = document.getElementById('installationSteps');
+            
+            // Show configuration if we have at least a server and launch method
+            if (server && launchMethod) {
+                let command, args;
+                switch(launchMethod) {
+                    case 'jbang':
+                        command = 'jbang';
+                        args = [`${server}@${MCP_ORG}`];
+                        break;
+                    case 'uvx':
+                        command = 'uvx';
+                        args = ['jbang', `${server}@${MCP_ORG}`];
+                        break;
+                    case 'npm':
+                        command = 'npx';
+                        args = ['-y', '@jbangdev/jbang', `${server}@${MCP_ORG}`];
+                        break;
+                }
+
+                // If client is selected, show client-specific config
+                if (client) {
+                    const config = configs[client];
+                    outputTitle.textContent = `Configuration for ${config.filename}`;
+                    configOutput.textContent = config.template(server, command, args);
+                } else {
+                    // Show generic config when no client is selected
+                    outputTitle.textContent = 'Generic Configuration';
+                    configOutput.textContent = JSON.stringify({
+                        mcpServers: {
+                            [server]: {
+                                command: command,
+                                args: args
+                            }
+                        }
+                    }, null, 2);
+                }
+                
+                // Show installation instructions for launch method
+                installationInstructions.style.display = 'block';
+                installationSteps.innerHTML = `
+                    <p><strong>To install ${launchMethod.toUpperCase()}:</strong></p>
+                    <pre><code class="language-bash">${installationGuides[launchMethod]}</code></pre>
+                `;
+
+                output.style.display = 'block';
+                Prism.highlightAll();
+            } else {
+                // Hide output if we don't have minimum required fields
+                output.style.display = 'none';
+            }
+        }
+
+        async function copyConfig() {
+            const configText = document.getElementById('configOutput').textContent;
+            try {
+                await navigator.clipboard.writeText(configText);
+                const copyButton = document.querySelector('.copy-button');
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyButton.textContent = 'Copy Configuration';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        }
+
+        // Add event listeners to all selects
+        document.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', updateConfig);
+        });
+    </script>
+</body>
+</html> 
