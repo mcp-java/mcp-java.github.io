@@ -139,6 +139,7 @@
     <div class="header">
         <h1>Java MCP Server Configuration Generator</h1>
         <p>Generate configuration for your preferred MCP server and client in seconds</p>
+        <p>Read more at <a href="https://github.com/mcp-java">MCP Java</a> GitHub Organization</p>
     </div>
     
     <div class="config-form">
@@ -146,7 +147,6 @@
             <label for="mcpClient">1. Select MCP Client</label>
             <div class="description">Choose your preferred MCP client</div>
             <select id="mcpClient">
-                <option value="">Choose a client...</option>
                 <option value="claude">Claude Desktop - AI-powered desktop assistant</option>
                 <option value="cursor">Cursor - AI-first code editor</option>
                 <option value="vscode">Visual Studio Code (Insiders) - Popular code editor</option>
@@ -158,7 +158,6 @@
             <label for="mcpServer">2. Select MCP Server</label>
             <div class="description">Choose which MCP server functionality you need</div>
             <select id="mcpServer">
-                <option value="">Choose a server...</option>
             </select>
         </div>
 
@@ -199,10 +198,8 @@
                 const data = await response.json();
                 const serverSelect = document.getElementById('mcpServer');
                 
-                // Clear existing options except the first one
-                while (serverSelect.options.length > 1) {
-                    serverSelect.remove(1);
-                }
+                // Clear existing options
+                serverSelect.innerHTML = '';
                 
                 // Add options from the catalog
                 Object.entries(data.aliases).forEach(([key, value]) => {
@@ -211,6 +208,9 @@
                     option.textContent = `${key} - ${value.description}`;
                     serverSelect.appendChild(option);
                 });
+
+                // Trigger initial config update after loading catalog
+                updateConfig();
             } catch (error) {
                 console.error('Error fetching server catalog:', error);
             }
