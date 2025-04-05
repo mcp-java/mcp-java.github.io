@@ -173,6 +173,15 @@
                 <option value="npm">NPM - Node Package Manager</option>
             </select>
         </div>
+
+        <div class="select-group">
+            <label for="platform">4. Select Platform</label>
+            <div class="description">Choose your operating system (defaults based on detection)</div>
+            <select id="platform">
+                <option value="windows">Windows</option>
+                <option value="non-windows">Linux / Mac OSX</option>
+            </select>
+        </div>
     </div>
 
     <div id="output" class="output-container" style="display: none;">
@@ -194,6 +203,16 @@
         // Configuration constants
         const MCP_ORG = 'mcp-java';
         
+        // Detect Windows OS
+        const isWindows = navigator.platform.toLowerCase().includes('win');
+        
+        // Set platform default on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const platformSelect = document.getElementById('platform');
+            platformSelect.value = isWindows ? 'windows' : 'non-windows';
+            fetchServerCatalog();
+        });
+
         // Add catalog data fetching
         async function fetchServerCatalog() {
             try {
@@ -219,9 +238,6 @@
             }
         }
 
-        // Call fetchServerCatalog when the page loads
-        document.addEventListener('DOMContentLoaded', fetchServerCatalog);
-
         const configs = {
             claude: {
                 filename: 'claude_desktop_config.json',
@@ -240,6 +256,22 @@
             cursor: {
                 filename: 'mcp.json',
                 template: (server, command, args) => {
+                    // Use platform dropdown value instead of OS detection
+                    const isWindowsPlatform = document.getElementById('platform').value === 'windows';
+                    
+                    // For Windows with jbang, use cmd /c prefix
+                    if (isWindowsPlatform && command === 'jbang') {
+                        const config = {
+                            mcpServers: {
+                                [server]: {
+                                    command: "cmd",
+                                    args: ["/c", command, ...args]
+                                }
+                            }
+                        };
+                        return JSON.stringify(config, null, 2);
+                    }
+                    // For other cases, use standard format
                     const config = {
                         mcpServers: {
                             [server]: {
