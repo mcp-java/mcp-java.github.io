@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Java MCP Server Configuration Generator</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
     <style>
         :root {
             --primary-color: #4695EB;
@@ -133,6 +135,19 @@
         code {
             font-size: 14px;
         }
+
+        .server-description {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .server-description p {
+            margin: 0;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -144,7 +159,18 @@
     
     <div class="config-form">
         <div class="select-group">
-            <label for="mcpClient">1. Select MCP Client</label>
+            <label for="mcpServer">1. Select MCP Server</label>
+            <div class="description">Choose which MCP server functionality you need</div>
+            <select id="mcpServer">
+            </select>
+            <div id="serverDescription" class="server-description" style="display: none;"></div>
+            <div class="description" style="margin-top: 8px; font-style: italic;">
+                If you want to add your own MCP Server to the list, submit a PR to the <a href="https://github.com/mcp-java/jbang-catalog" target="_blank">JBang Catalog repository</a>.
+            </div>
+        </div>
+
+        <div class="select-group">
+            <label for="mcpClient">2. Select MCP Client</label>
             <div class="description">Choose your preferred MCP client</div>
             <select id="mcpClient">
                 <option value="claude">Claude Desktop - AI-powered desktop assistant</option>
@@ -152,16 +178,6 @@
                 <option value="vscode">Visual Studio Code (Insiders) - Popular code editor</option>
                 <option value="quarkus">Quarkus LangChain4j - Java AI development framework</option>
             </select>
-        </div>
-
-        <div class="select-group">
-            <label for="mcpServer">2. Select MCP Server</label>
-            <div class="description">Choose which MCP server functionality you need</div>
-            <select id="mcpServer">
-            </select>
-            <div class="description" style="margin-top: 8px; font-style: italic;">
-                If you want to add your own MCP Server to the list, submit a PR to the <a href="https://github.com/mcp-java/jbang-catalog" target="_blank">JBang Catalog repository</a>.
-            </div>
         </div>
 
         <div class="select-group">
@@ -227,8 +243,24 @@
                 Object.entries(data.aliases).forEach(([key, value]) => {
                     const option = document.createElement('option');
                     option.value = key;
-                    option.textContent = `${key} - ${value.description}`;
+                    option.textContent = `${key}`;
+                    option.setAttribute('data-description', value.description || '');
                     serverSelect.appendChild(option);
+                });
+
+                // Add change event listener for server description
+                serverSelect.addEventListener('change', (e) => {
+                    const description = e.target.options[e.target.selectedIndex].getAttribute('data-description');
+                    const descriptionContainer = document.getElementById('serverDescription');
+                    
+                    if (description) {
+                        console.log(description);
+                        const sanitizedHtml = DOMPurify.sanitize(marked.parse(description));
+                        descriptionContainer.innerHTML = sanitizedHtml;
+                        descriptionContainer.style.display = 'block';
+                    } else {
+                        descriptionContainer.style.display = 'none';
+                    }
                 });
 
                 // Trigger initial config update after loading catalog
